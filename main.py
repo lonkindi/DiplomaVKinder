@@ -1,5 +1,5 @@
 import time
-
+import datetime
 import params as p
 import requests
 import re
@@ -18,6 +18,7 @@ class UserVK:
         if usr.get('bdate'):
             self.bdate = usr['bdate']
         else:
+            print('У пользователя не указан возраст. Ограничение по возрасту будет взято из настроек программы.')
             self.bdate = None
         if usr.get('city'):
             self.city = usr['city']['id']
@@ -36,7 +37,7 @@ class UserVK:
             self.books = usr['books']
         else:
             self.books = None
-        self.friends = get_friends(self.id)
+        self.friends = get_friends(self.id)  # list(ids)
         self.groups = get_groups(self.id)  # list(ids)
 
     def get_user(self, uid):
@@ -46,7 +47,6 @@ class UserVK:
         response = requests.get('https://api.vk.com/method/users.get', params)
         resp = response.json()['response'][0]
         return resp
-
 
 def get_groups(uid):
     params = r_p
@@ -64,13 +64,17 @@ def get_friends(uid):
     response = requests.get('https://api.vk.com/method/friends.get', params)
     user_friends = None
     if response.json().get('response'):
-        user_friends = response.json()['response']['items']
+        user_friends = list()
+        for item in response.json()['response']['items']:
+            user_friends.append(item['id'])
+        # print('user_friends =', len(user_friends))
     return user_friends
 
 
 def get_etoken(url_token):
     pattern = re.compile('(\S*)(access_token=)(\w*)(\S*)')
     token = pattern.sub(r'\3', url_token)
+    return token
 
 
 def get_uid(user_uid):
@@ -102,7 +106,8 @@ def search_candidate(user_vk):
     elif user_vk.sex == 1:
         sex = 2
     params['sex'] = sex
-    params['age_from'] = p.age_min
+    if user_vk.bdate:
+        params['age_from'] = p.age_min
     params['age_to'] = p.age_max
     params['city'] = user_vk.city
     params['fields'] = 'interests,music,books'
@@ -110,6 +115,11 @@ def search_candidate(user_vk):
     response = requests.get('https://api.vk.com/method/users.search', params)
     candidates = response.json()['response']['items']
     return candidates
+
+def get_age(b_date):
+    d1 = datetime.datetime.strptime(b_date, '%d.%m.%Y').date()
+    d2 = datetime.datetime.now().date()
+    print(d2.timetuple()[0] - d1.timetuple()[0])
 
 
 def check_mutual_friends(c_id):
@@ -124,13 +134,13 @@ def check_mutual_friends(c_id):
         res = True
     return res
 
-def get_mutual_friends(c_list):
-    friends_groups_set = set()
+
+def get_mutual_friends_photos(c_list):
     counter = 0
     t_counter = len(c_list)
     temp_list = list()
     params = r_p
-    res_friend_dict = dict()
+    res_friends_dict = dict()
     res_groups_dict = dict()
     res_photos_dict = dict()
     for item in c_list:
@@ -138,69 +148,51 @@ def get_mutual_friends(c_list):
         t_counter -= 1
         temp_list.append(item['id'])
         if counter == 25 or t_counter == 0:
-            friend_dict = dict()
-            groups_dict = dict()
-            # params['code'] = f'var a = 0; var b =  {temp_list}; var s = "{{"; var sid = {user_vk.id}; while (a != {len(temp_list)})' + '{s = s + b[a] +": "+API.friends.getMutual({"source_uid":sid,"target_uid":b[a]}).length+", "; a = a + 1;}; return s+"}"; '
-            # response = requests.post('https://api.vk.com/method/execute', params)
-            # friend_dict = eval(response.json()['response'])
-            # res_friend_dict.update(friend_dict)
-            time.sleep(1 / 3)
-            # params['code'] = f'var a = 0; var b =  {temp_list}; var s = "{{"; while (a != {len(temp_list)})' + '{s = s + b[a] +": ["+API.groups.get({"user_uid":b[a]}).items+"], "; a = a + 1;}; return s+"}"; '
-            # response = requests.post('https://api.vk.com/method/execute', params)
-            # # print(response.json())
-            # groups_dict = eval(response.json()['response'])
-            # res_groups_dict.update(groups_dict)
-            # time.sleep(1 / 3)
-            params['code'] = f'var a = 0; var b =  {temp_list}; var s = "{{"; while (a != {len(temp_list)})' + '{s = s + b[a] +": ' \
-                            '["+API.photos.get({"owner_id":b[a],"album_id":"profile","extended":1})+"], "; a = a + 1;}; ' \
-                            'return s+"}"; '
+            params['code'] = f'var a = 0; var b =  {temp_list}; var s = "{{"; var sid = {user_vk.id}; ' \
+                             f'while (a != {len(temp_list)})' + '{s = s + b[a] +": "+API.friends.getMutual' \
+                                                                '({"source_uid":sid,"target_uid":b[a]}).length' \
+                                                                '+", "; a = a + 1;};\
+                                return s+"}"; '
             response = requests.post('https://api.vk.com/method/execute', params)
-            print(response.json())
+            friend_dict = eval(response.json()['response'])
+            res_friends_dict.update(friend_dict)
+            params['code'] = f'var a = 0; var b =  {temp_list}; var s = "{{"; while (a != {len(temp_list)})' \
+                             + '{s = s + b[a] + ": ["+API.groups.get({"user_id":b[a]}).items+"], "; ' \
+                               'a = a + 1;}; return s+"}"; '
+            response = requests.post('https://api.vk.com/method/execute', params)
+            groups_dict = eval(response.json()['response'])
+            res_groups_dict.update(groups_dict)
+            params['code'] = f'var a = 0; var b =  {temp_list}; var s = "{{"; while (a != {len(temp_list)})' \
+                             + '{s = s + b[a] +": "+API.photos.get({"owner_id":b[a],"album_id":"profile"}).count' \
+                               '+", "; a = a + 1;}; ' \
+                               'return s+"}"; '
+            response = requests.post('https://api.vk.com/method/execute', params)
             photos_dict = eval(response.json()['response'])
             res_photos_dict.update(photos_dict)
-
-            # print(response.json())
             counter = 0
             temp_list.clear()
-
-            # print('*', end='')
-    # print('res_friend_dict=', res_friend_dict)
-    # print('res_groups_dic=', res_groups_dict)
-    print('res_photos_dic=', res_photos_dict)
-    # response_set = set()
-    # for str_item in response_list:
-    #     if str_item != '':
-    #         response_set.add(int(str_item))
-    # friends_groups_set = friends_groups_set | response_set
-    # print()
-    return friends_groups_set
+    return res_friends_dict, res_groups_dict, res_photos_dict
 
 
-def check_mutual_groups(c_id):
-    source_groups = set(user_vk.groups)
-    target_groups = set()
-    if get_groups(c_id):
-        target_groups = set(get_groups(c_id))
-    res = True
-    if source_groups.isdisjoint(target_groups):
-        res = False
-    return res
-
-
-def get_photos(c_id):
-    params = r_p
-    params['owner_id'] = c_id
-    params['album_id'] = 'profile'
-    response = requests.get('https://api.vk.com/method/photos.get', params)
-    resp = response.json()
-    print('resp_photos=', resp)
+def update_candidates(candidates, friends_dict, groups_dict, photos_dict):
+    res_candidates = list()
+    for item in candidates:
+        if photos_dict[item['id']] > 2:
+            item['photos'] = photos_dict[item['id']]
+            if friends_dict[item['id']]:
+                item['m_friends'] = True
+            groups_set = set(groups_dict[item['id']])
+            user_friends_set = set(user_vk.friends)
+            if not groups_set.isdisjoint(user_friends_set):
+                item['m_groups'] = True
+            res_candidates.append(item)
+    return res_candidates
 
 
 def clean_candidates(items):
     clear_list = list()
     for item in items:
         if item['is_closed']:
-            # items.remove(item)
             continue
         else:
             del item['is_closed']
@@ -209,19 +201,21 @@ def clean_candidates(items):
             item['used'] = False
             item['m_friends'] = False
             item['m_groups'] = False
+            item['photos'] = 0
             clear_list.append(item)
     return clear_list
 
 
-
-
 if __name__ == '__main__':  # armo.appacha,24863449,27406252,10754162,d.lonkin,o.sevostyanova77,eshmargunov
     user_vk = UserVK(24863449)
-    dirty_candidates = search_candidate(user_vk)
-    print(len(dirty_candidates))
-    candidates = clean_candidates(dirty_candidates)
-    get_mutual_friends(candidates)
-    print(len(candidates))
+    # dirty_candidates = search_candidate(user_vk)
+    # print(len(dirty_candidates))
+    # candidates = clean_candidates(dirty_candidates)
+    # friends_dict, groups_dict, photos_dict = get_mutual_friends_photos(candidates)
+    # print('friends_dict=', friends_dict)
+    # print('groups_dict=', groups_dict)
+    # print('photos_dict=', photos_dict)
+    # print(update_candidates(candidates, friends_dict, groups_dict, photos_dict))
     # for candidate in candidates['items']:
     #     vk_id = candidate['id']
     #     used = False
@@ -234,7 +228,10 @@ if __name__ == '__main__':  # armo.appacha,24863449,27406252,10754162,d.lonkin,o
     #     else:
     #         continue
     #     photos = get_photos(vk_id)
-        # db_a.add_candidate(vk_id, used, m_friends, m_groups, interests, music, books, photos)
+    # db_a.add_candidate(vk_id, used, m_friends, m_groups, interests, music, books, photos)
+    get_age("26.12.1976")
+
+
 
     # print(user_vk.friends)
     # print(user_vk.city)
