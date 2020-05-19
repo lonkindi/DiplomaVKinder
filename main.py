@@ -107,8 +107,12 @@ def search_candidate(user_vk):
         sex = 2
     params['sex'] = sex
     if user_vk.bdate:
-        params['age_from'] = p.age_min
-    params['age_to'] = p.age_max
+        age = get_age(user_vk.bdate)
+        min, max = age, age
+    else:
+        min, max = p.age_min, p.age_max
+    params['age_from'] = min
+    params['age_to'] = max
     params['city'] = user_vk.city
     params['fields'] = 'interests,music,books'
     params['has_photo'] = 1
@@ -119,8 +123,8 @@ def search_candidate(user_vk):
 def get_age(b_date):
     d1 = datetime.datetime.strptime(b_date, '%d.%m.%Y').date()
     d2 = datetime.datetime.now().date()
-    print(d2.timetuple()[0] - d1.timetuple()[0])
-
+    delta = d2 - d1
+    return delta.days//365
 
 def check_mutual_friends(c_id):
     params = r_p
@@ -229,7 +233,7 @@ if __name__ == '__main__':  # armo.appacha,24863449,27406252,10754162,d.lonkin,o
     #         continue
     #     photos = get_photos(vk_id)
     # db_a.add_candidate(vk_id, used, m_friends, m_groups, interests, music, books, photos)
-    get_age("26.12.1976")
+    print(get_age("26.12.1976"))
 
 
 

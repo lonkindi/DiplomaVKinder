@@ -18,6 +18,6 @@ weights = [
     ("books", 8),
 ]
 
-age_min = 43
-age_max = 43
+age_min = 18
+age_max = 20
 
