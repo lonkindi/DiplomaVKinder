@@ -5,19 +5,19 @@ vk_token = '0292b075b7edbcefe76d6574bf2bfb0d40f4eb1dcd6ae754464f8fe9100ac548cc28
 
 req_params = dict(
         access_token=vk_token,
-        v='5.103')
+        v='5.107')
 
 weights = [
-    ("sex", 1),
-    ("city", 2),
-    ("friends", 3),
-    ("age", 4),
-    ("groups", 5),
-    ("interests", 6),
-    ("music", 7),
-    ("books", 8),
+    ("sex", 8),
+    ("city", 7),
+    ("friends", 6),
+    ("age", 5),
+    ("groups", 4),
+    ("interests", 3),
+    ("music", 2),
+    ("books", 1)
 ]
 
 age_min = 18
-age_max = 20
+age_max = 25
 
