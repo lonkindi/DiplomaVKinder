@@ -20,4 +20,3 @@ weights = [
 
 age_min = 18
 age_max = 25
-
