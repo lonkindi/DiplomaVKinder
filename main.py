@@ -7,6 +7,7 @@ import db_actions as db_a
 
 vk_token = p.vk_token  # test token
 r_p = p.req_params
+r_p['access_token'] = vk_token
 
 
 class UserVK:
@@ -15,7 +16,8 @@ class UserVK:
         usr = self.get_user(self.id)
         self.names = usr['first_name'] + ' ' + usr['last_name']
         self.sex = usr['sex']  # 2-M, 1-F ,0-Not
-        if usr.get('bdate'):  # Если возраст пользователя скрыт, то берём из настроек приложения свои данные
+        if usr.get('bdate') and (usr.get('bdate')[
+                                 5:4:-1] == '.'):  # Если возраст пользователя скрыт, то берём из настроек приложения свои данные
             self.bdate = usr['bdate']
         else:
             print('У пользователя не указан возраст. Ограничение по возрасту будет взято из настроек программы.')
@@ -303,7 +305,7 @@ def output_data(data):
 
 def main():
     params = r_p
-    params['count'] = 1000  # VK limit 1000
+    params['count'] = 100  # VK limit 1000
     sex = 0
     if user_vk.sex == 2:
         sex = 1
@@ -359,30 +361,30 @@ def main():
 
 
 if __name__ == '__main__':  # armo.appacha,24863449,27406252,10754162,d.lonkin,o.sevostyanova77,eshmargunov
-    # print('Для использования приложения необходим ключ авторизации')
-    # print('перейдите по ссылке: ')
-    # print(p.req_access_key)
-    # print('Подтвердите разрешения для приложения')
-    # print('После перехода на пустую страницу с текстом: "Пожалуйста, не копируйте данные из адресной строки для '
-    #       'сторонних сайтов. Таким образом Вы можете потерять доступ к Вашему аккаунту."')
-    # token_url = input('полностью скопируйте её адрес и введите его сюда => ')
-    # vk_token = get_etoken(token_url)
+    print('Для использования приложения необходим ключ авторизации')
+    print('перейдите по ссылке: ')
+    print(p.req_access_key)
+    print('Подтвердите разрешения для приложения')
+    print('После перехода на пустую страницу с текстом: "Пожалуйста, не копируйте данные из адресной строки для '
+          'сторонних сайтов. Таким образом Вы можете потерять доступ к Вашему аккаунту."')
+    token_url = input('полностью скопируйте её адрес и введите его сюда => ')
+    vk_token = get_etoken(token_url)
+    r_p['access_token'] = vk_token
 
-    # input_id = input('Введите id пользователя ВК или его имя: ')
-    # user_uid = get_uid(input_id)
-    # user_id = check_user(user_uid)
-    # if user_id == 'error_code:113':
-    #     print(f'Пользователь "{user_uid}" не найден. Проверьте вводимые данные.')
-    # elif user_id == 'error_code:5':
-    #     print('Ошибка авторизации, проверьте eToken')
-    # elif user_id == 'many':
-    #     print(f'По вашему запросу: "{user_uid}" найдено несколько пользователей. Уточните имя.')
-    # elif user_id == 'banned':
-    #     print(f'Пользователь "{user_uid}" заблокирован. Анализ невозможен.')
-    # elif user_id == 'deleted':
-    #     print(f'Пользователь "{user_uid}" удалён либо не существует. Анализ невозможен.')
-    # else:
-    #     print(f'Пользователь "{user_uid}" (id{user_id}) доступен для анализа ...')
-    #     user_vk = UserVK(user_id)
-    #     main()
-    print(check_used(''))
+    input_id = input('Введите id пользователя ВК или его имя: ')
+    user_uid = get_uid(input_id)
+    user_id = check_user(user_uid)
+    if user_id == 'error_code:113':
+        print(f'Пользователь "{user_uid}" не найден. Проверьте вводимые данные.')
+    elif user_id == 'error_code:5':
+        print('Ошибка авторизации, проверьте eToken')
+    elif user_id == 'many':
+        print(f'По вашему запросу: "{user_uid}" найдено несколько пользователей. Уточните имя.')
+    elif user_id == 'banned':
+        print(f'Пользователь "{user_uid}" заблокирован. Анализ невозможен.')
+    elif user_id == 'deleted':
+        print(f'Пользователь "{user_uid}" удалён либо не существует. Анализ невозможен.')
+    else:
+        print(f'Пользователь "{user_uid}" (id{user_id}) доступен для анализа ...')
+        user_vk = UserVK(user_id)
+        main()

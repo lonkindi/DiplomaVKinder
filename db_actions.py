@@ -41,5 +41,4 @@ def create_all():
 
 
 if __name__ == '__main__':
-    # create_all()
-    print(get_used(0))
+    create_all()
